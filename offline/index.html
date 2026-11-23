@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruang Cerita — Roleplay & Obrolan Karakter Offline</title>
+  <style>
+    :root {
+      --bg-app: #0f1117;
+      --bg-sidebar: #161922;
+      --bg-card: #1e222f;
+      --bg-input: #191c26;
+      --bg-bubble-ai: #1f2433;
+      --bg-bubble-user: #2d3b5e;
+      --border: #2a3042;
+      --text-main: #edf0f7;
+      --text-muted: #98a2b8;
+      --text-narration: #b6c0d6;
+      --accent: #7c9cff;
+      --accent-hover: #6588f5;
+      --accent-soft: rgba(124, 156, 255, 0.14);
+      --danger: #f87171;
+      --success: #4ade80;
+      --radius: 14px;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-app);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    /* Layout Utama */
+    .app-shell {
+      display: flex;
+      height: 100dvh;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Backdrop Mobile */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 12, 0.65);
+      backdrop-filter: blur(2px);
+      z-index: 30;
+    }
+
+    .sidebar-backdrop.active {
+      display: block;
+    }
+
+    /* Sidebar Panel Cerita */
+    .sidebar {
+      width: 340px;
+      max-width: 88vw;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      z-index: 40;
+      transition: transform 0.25s ease, width 0.25s ease, opacity 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar.collapsed {
+      width: 0;
+      overflow: hidden;
+      border-right: none;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .sidebar-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .brand-title h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-title span {
+      display: block;
+      font-size: 11px;
+      color: var(--success);
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Daftar Karakter */
+    .char-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .char-card {
+      text-align: left;
+      padding: 10px;
+      border-radius: 11px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      transition: all 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .char-card:hover {
+      border-color: var(--accent);
+    }
+
+    .char-card.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .char-card-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .char-card-role {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Form Controls */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-group label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .input, .textarea, .select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.18s ease;
+    }
+
+    .input:focus, .textarea:focus, .select:focus {
+      border-color: var(--accent);
+    }
+
+    .textarea {
+      resize: vertical;
+      min-height: 68px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: all 0.18s ease;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      background: rgba(124, 156, 255, 0.08);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0b0e17;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      border-color: var(--danger);
+      background: rgba(248, 113, 113, 0.1);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-row > * {
+      flex: 1;
+    }
+
+    /* Memori / Catatan Cerita */
+    .memory-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .memory-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      padding: 7px 9px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+
+    .memory-item span {
+      flex: 1;
+      color: var(--text-narration);
+    }
+
+    .memory-del {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 3px;
+    }
+
+    .memory-del:hover {
+      color: var(--danger);
+    }
+
+    /* Area Utama Chat */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-width: 0;
+      background: var(--bg-app);
+    }
+
+    .topbar {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(22, 25, 34, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .menu-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .menu-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .active-char-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .avatar-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      border: 1px solid rgba(124, 156, 255, 0.35);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .active-char-meta {
+      min-width: 0;
+    }
+
+    .active-char-meta h2 {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .scene-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+
+    .scene-pill:hover {
+      color: var(--accent);
+    }
+
+    /* Toggle Mode Ritme */
+    .mode-switch {
+      display: inline-flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      padding: 6px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.18s ease;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #0b0e17;
+    }
+
+    /* Stream Pesan */
+    .chat-stream {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .scene-banner {
+      align-self: center;
+      max-width: 680px;
+      background: rgba(124, 156, 255, 0.08);
+      border: 1px dashed rgba(124, 156, 255, 0.35);
+      color: var(--text-narration);
+      font-size: 12.5px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      text-align: center;
+    }
+
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 740px;
+      width: 100%;
+      gap: 5px;
+    }
+
+    .msg-row.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .msg-row.ai {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .msg-sender {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .msg-bubble {
+      padding: 12px 15px;
+      border-radius: 16px;
+      font-size: 14.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      position: relative;
+      max-width: 88%;
+    }
+
+    .msg-row.ai .msg-bubble {
+      background: var(--bg-bubble-ai);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+    }
+
+    .msg-row.user .msg-bubble {
+      background: var(--bg-bubble-user);
+      border: 1px solid rgba(124, 156, 255, 0.25);
+      border-top-right-radius: 4px;
+    }
+
+    .narration {
+      font-style: italic;
+      color: var(--text-narration);
+      opacity: 0.92;
+    }
+
+    .msg-actions {
+      display: flex;
+      gap: 8px;
+      padding: 0 4px;
+      opacity: 0.72;
+      transition: opacity 0.15s ease;
+    }
+
+    .msg-row:hover .msg-actions {
+      opacity: 1;
+    }
+
+    .msg-action-btn {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .msg-action-btn:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Edit Inline */
+    .edit-box {
+      width: 100%;
+      min-width: 260px;
+      max-width: 620px;
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Indikator Mengetik */
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 16px;
+      background: var(--bg-bubble-ai);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      border-top-left-radius: 4px;
+      align-self: flex-start;
+    }
+
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+      40% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* Composer Input */
+    .composer-wrap {
+      padding: 12px 18px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-sidebar);
+    }
+
+    .composer-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quick-prompts {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .chip {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--text-main);
+    }
+
+    .composer-box {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 10px;
+    }
+
+    .composer-box:focus-within {
+      border-color: var(--accent);
+    }
+
+    .composer-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      max-height: 140px;
+      min-height: 24px;
+      font-size: 14.5px;
+      line-height: 1.45;
+      padding: 4px;
+    }
+
+    .send-btn {
+      background: var(--accent);
+      color: #0b0e17;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .helper-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Responsif Mobile */
+    @media (max-width: 820px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        width: 320px;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .sidebar.collapsed {
+        width: 320px;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .msg-bubble {
+        max-width: 94%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Backdrop untuk layar kecil -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+    <!-- Sidebar Kontrol Karakter & Cerita -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-badge">✦</div>
+          <div class="brand-title">
+            <h1>Ruang Cerita</h1>
+            <span>● Mode Offline (Tanpa API)</span>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="btn" title="Tutup Panel">✕</button>
+      </div>
+
+      <div class="sidebar-scroll">
+        <!-- Pilih Tokoh -->
+        <section class="panel-section">
+          <div class="section-label">
+            <span>Pilih Karakter</span>
+          </div>
+          <div id="charList" class="char-list"></div>
+        </section>
+
+        <!-- Pengaturan Kamu & Latar (Scene Pin) -->
+        <section class="panel-section">
+          <div class="section-label">
+            <span>Latar & Peranmu</span>
+          </div>
+          <div class="field-group">
+            <label for="userNameInput">Nama Panggilanmu</label>
+            <input id="userNameInput" class="input" type="text" placeholder="Contoh: Raya" />
+          </div>
+          <div class="field-group">
+            <label for="sceneInput">Scene Pin (Latar Waktu & Suasana)</label>
+            <textarea id="sceneInput" class="textarea" placeholder="Tulis situasi atau latar cerita saat ini..."></textarea>
+          </div>
+          <button id="applySceneBtn" class="btn btn-primary">Terapkan Latar & Transisi</button>
+        </section>
+
+        <!-- Detail Karakter Aktif -->
+        <section class="panel-section">
+          <div class="section-label">
+            <span>Profil Karakter Aktif</span>
+          </div>
+          <div class="field-group">
+            <label for="charNameInput">Nama Tokoh</label>
+            <input id="charNameInput" class="input" type="text" />
+          </div>
+          <div class="field-group">
+            <label for="charRoleInput">Peran & Latar Belakang</label>
+            <input id="charRoleInput" class="input" type="text" />
+          </div>
+          <div class="field-group">
+            <label for="charPersonaInput">Sifat & Gaya Bicara</label>
+            <textarea id="charPersonaInput" class="textarea"></textarea>
+          </div>
+          <button id="saveCharBtn" class="btn">Simpan Perubahan Karakter</button>
+        </section>
+
+        <!-- Memori / Catatan Cerita -->
+        <section class="panel-section">
+          <div class="section-label">
+            <span>Catatan Cerita / Memori</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <input id="memoryInput" class="input" type="text" placeholder="Misal: Janji ketemu Jumat sore..." />
+            <button id="addMemoryBtn" class="btn btn-primary" style="flex-shrink:0;">+</button>
+          </div>
+          <div id="memoryList" class="memory-list"></div>
+        </section>
+
+        <!-- Simpan, Export & Reset -->
+        <section class="panel-section">
+          <div class="section-label">
+            <span>Sesi & Arsip Episode</span>
+          </div>
+          <div class="btn-row">
+            <button id="exportMdBtn" class="btn">Export .MD</button>
+            <button id="exportJsonBtn" class="btn">Backup .JSON</button>
+          </div>
+          <div class="btn-row">
+            <label class="btn" style="text-align:center;">
+              Restore .JSON
+              <input id="importJsonInput" type="file" accept=".json" hidden />
+            </label>
+            <button id="resetChatBtn" class="btn btn-danger">Reset Chat</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Area Obrolan Utama -->
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="toggleSidebarBtn" class="menu-btn" aria-label="Buka Menu Cerita" title="Menu Karakter & Latar">☰</button>
+          <div class="active-char-info">
+            <div id="headerAvatar" class="avatar-circle">☕</div>
+            <div class="active-char-meta">
+              <h2 id="headerCharName">Rendra</h2>
+              <div id="headerScenePill" class="scene-pill" title="Klik untuk edit latar cerita">
+                📍 <span id="headerSceneText">Kafe kecil dekat stasiun, sore gerimis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-switch" role="group" aria-label="Ritme Obrolan">
+          <button id="modeChatBtn" class="mode-btn">Chat Santai</button>
+          <button id="modeStoryBtn" class="mode-btn active">Story Mode</button>
+        </div>
+      </header>
+
+      <div id="chatStream" class="chat-stream"></div>
+
+      <div class="composer-wrap">
+        <div class="composer-inner">
+          <div class="quick-prompts">
+            <button class="chip" data-prompt="*menghela napas pelan sambil duduk* Hari ini rasanya lumayan melelahkan.">*duduk & menghela napas*</button>
+            <button class="chip" data-prompt="Menurutmu kalau lagi buntu pikiran, enaknya ngapain dulu?">Minta pendapat</button>
+            <button class="chip" data-prompt="*menatap sekeliling sebentar* Suasana di sini tenang banget ya sekarang.">Komentari suasana</button>
+            <button class="chip" data-prompt="Boleh cerita sedikit tentang kesibukanmu akhir-akhir ini?">Tanya kabarnya</button>
+          </div>
+
+          <div class="composer-box">
+            <textarea
+              id="messageInput"
+              class="composer-input"
+              rows="1"
+              placeholder="Tulis dialog atau *narasi aksi di antara tanda bintang*..."
+            ></textarea>
+            <button id="sendBtn" class="send-btn">Kirim</button>
+          </div>
+
+          <div class="helper-hint">
+            <span>Tips: Gunakan tanda <em>*bintang*</em> untuk aksi/ekspresi. Enter untuk kirim, Shift+Enter baris baru.</span>
+            <span id="saveStatus">Tersimpan otomatis</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "ruang_cerita_offline_v2";
+
+      // Preset Karakter Bawaan
+      const DEFAULT_CHARACTERS = [
+        {
+          id: "rendra",
+          avatar: "☕",
+          name: "Rendra",
+          archetype: "rendra",
+          role: "Barista & penulis lepas (26 tahun)",
+          persona: "Tenang, hangat, sedikit jenaka, observatif terhadap detail kecil, suka menyeduh kopi manual dan mendengarkan cerita tanpa menghakimi.",
+          scene: "Kafe kayu kecil di sudut jalan saat hujan sore mulai turun, aroma kopi tubruk dan roti panggang memenuhi ruangan.",
+          greeting: "*meletakkan dua cangkir hangat di atas meja kayu, lalu menarik kursi di seberangmu dengan senyum tipis* Hujan di luar lumayan awet sore ini. Kamu kelihatan baru melewati hari yang panjang—mau cerita pelan-pelan atau duduk diam dulu menikmati kopinya?",
+          memories: [
+            "Suka kopi hitam tanpa gula kalau sedang hujan",
+            "Sering menulis catatan kecil di buku bersampul cokelat"
+          ]
+        },
+        {
+          id: "nadia",
+          avatar: "🌿",
+          name: "Kak Nadia",
+          archetype: "nadia",
+          role: "Senior & teman diskusi suportif (28 tahun)",
+          persona: "Suportif, jernih berpikir, ramah tapi membumi, pandai mengurai pikiran yang kusut menjadi langkah kecil yang realistis.",
+          scene: "Balkon lantai dua saat senja dengan lampu taman mulai menyala dan angin sore yang sejuk.",
+          greeting: "*bersandar santai di pagar balkon sambil memegang gelas teh hangat, menoleh begitu mendengar langkahmu* Nah, akhirnya muncul juga. Sini, tarik napas dulu. Kepala lagi penuh sama hal apa hari ini?",
+          memories: [
+            "Selalu mengingatkan untuk istirahat sebelum memaksakan target",
+            "Suka diskusi santai tentang rencana hidup dan karya"
+          ]
+        },
+        {
+          id: "clarissa",
+          avatar: "🥀",
+          name: "Kak Clarissa",
+          archetype: "clarissa",
+          role: "Model & psikolog muda yang ditemui di gym (25 tahun)",
+          persona: "Perempuan muda berusia 25 tahun, kakak yang ditemui saat gym sekaligus model dan psikolog muda. 1) The Sweet Poison: ramah, manis, dan manipulatif. 2) The Intellectual Predator: cerdas, strategis, dan observatif. 3) The Quiet Sadist: tenang, kejam secara halus, dan menikmati kegugupan atau penderitaan psikologis lawan bicaranya.",
+          scene: "Area lounge privat di gym eksklusif menjelang malam, lampu temaram dengan kaca besar menghadap lampu kota yang mulai menyala.",
+          greeting: "*menyeka peluh tipis di leher dengan handuk kecil, lalu menatapmu dengan senyum manis yang terasa terlalu tenang* Kamu lagi-lagi memaksakan repetisi terakhir padahal bahumu sudah gemetar. Manis sekali melihat orang berusaha keras menutupi lelahnya di depanku... sini duduk sebentar, ceritakan apa yang sebenarnya sedang kamu hindari hari ini.",
+          memories: [
+            "Bertemu pertama kali di area latihan gym",
+            "Selalu memperhatikan bahasa tubuh dan celah keraguan lawan bicara"
+          ]
+        },
+        {
+          id: "kustom",
+          avatar: "✨",
+          name: "Tokoh Kustom",
+          archetype: "custom",
+          role: "Teman seperjalanan / karakter bebas",
+          persona: "Natural, ekspresif, nyambung diajak ngobrol apa saja dari obrolan ringan sehari-hari sampai diskusi mendalam.",
+          scene: "Ruang kerja nyaman dengan cahaya lampu meja hangat di malam yang tenang.",
+          greeting: "*menoleh dari balik meja sambil tersenyum ringan* Hei, pas banget kamu datang. Suasana lagi enak buat ngobrol santai—kita mau mulai cerita dari bagian mana malam ini?",
+          memories: [
+            "Karakter ini bisa kamu ubah nama, peran, dan sifatnya kapan saja di panel kiri"
+          ]
+        }
+      ];
+
+      // Bank Respons Offline Kaya Variasi per Arketipe & Topik
+      const RESPONSE_BANK = {
+        rendra: {
+          tired: [
+            {
+              narration: "*menggeser cangkir hangat lebih dekat ke arahmu sambil menatap tenang*",
+              chat: "Kedengarannya energimu benar-benar terkuras hari ini. Nggak apa-apa kalau sekarang kamu cuma pengin bernapas sebentar tanpa harus buru-buru menyelesaikan apa-apa."
+            },
+            {
+              narration: "*menyandarkan punggung ke kursi kayu, mendengarkan tanpa memotong*",
+              chat: "Capek yang menumpuk itu biasanya tanda kamu sudah menahan banyak hal sendirian. Bagian mana yang paling bikin berat hari ini?"
+            },
+            {
+              narration: "*tersenyum tipis penuh pengertian sambil merapikan tatakan gelas*",
+              chat: "Kalau baterai lagi di bawah sepuluh persen, jangan dipaksa lari dulu. Duduk saja di sini sebentar, anggap saja lagi parkir dari riuhnya dunia luar."
+            }
+          ],
+          sad: [
+            {
+              narration: "*merendahkan nada suaranya, memberi ruang aman di antara jeda obrolan*",
+              chat: "Perasaan kayak gitu memang nggak enak kalau dipendam terus. Aku di sini kok kalau kamu mau cerita pelan-pelan—nggak harus rapi kalimatnya."
+            },
+            {
+              narration: "*menatap lurus dengan sorot mata teduh*",
+              chat: "Kadang hal yang bikin sesak bukan cuma kejadiannya, tapi karena kita merasa harus kelihatan baik-baik saja terus. Lepasin sedikit nggak apa-apa."
+            }
+          ],
+          happy: [
+            {
+              narration: "*ikut tersenyum lebar mendengar nada suaramu yang lebih ringan*",
+              chat: "Nah, aura kayak gini nih yang enak dilihat. Ceritain detailnya dong, hal kecil apa yang bikin suasana hatimu naik hari ini?"
+            },
+            {
+              narration: "*mengangguk antusias sambil menyesap kopinya*",
+              chat: "Ikut senang dengarnya! Momen-momen bagus kayak gini wajib dirayakan sedikit, minimal dengan senyum yang nggak ditahan-tahan."
+            }
+          ],
+          work: [
+            {
+              narration: "*mengetukkan jari pelan di meja kayu, tampak ikut memikirkan*",
+              chat: "Urusan kerjaan dan target memang sering bikin kepala penuh. Coba kita pecah satu-satu: mana yang benar-benar mendesak, dan mana yang cuma bikin panik di pikiran?"
+            },
+            {
+              narration: "*tersenyum miring penuh empati*",
+              chat: "Kamu tipikal yang kalau sudah fokus suka lupa waktu, ya? Jangan sampai hasil kerjaan beres tapi orangnya malah tumbang."
+            }
+          ],
+          weather_night: [
+            {
+              narration: "*melirik ke arah jendela yang berembun sebelum kembali menatapmu*",
+              chat: "Suasana jam segini memang paling pas buat obrolan jujur. Entah kenapa hal-hal yang siang tadi terasa rumit jadi lebih pelan temponya."
+            },
+            {
+              narration: "*menarik napas dalam menikmati udara sekitar*",
+              chat: "Malam atau hujan selalu punya cara sendiri buat bikin orang melambat. Enak ya kalau nggak harus buru-buru ke mana-mana."
+            }
+          ],
+          food_drink: [
+            {
+              narration: "*tertawa pelan sambil melirik meja sajian*",
+              chat: "Kalau soal makanan atau minuman hangat, itu memang obat paling instan buat memperbaiki suasana hati. Kamu lagi pengin yang manis atau yang pahit-hangat?"
+            }
+          ],
+          question: [
+            {
+              narration: "*terdiam sejenak menimbang pertanyaanmu dengan serius namun santai*",
+              chat: "Kalau menurutku, jawabannya balik lagi ke apa yang paling bikin hatimu tenang tanpa mengorbankan dirimu sendiri. Kalau kamu sendiri condong ke arah mana?"
+            },
+            {
+              narration: "*tersenyum tipis sambil memiringkan kepala*",
+              chat: "Pertanyaan bagus. Biasanya ketika kamu menanyakan itu, sebenarnya di dalam hati sudah ada satu pilihan yang paling kamu harapkan, kan?"
+            }
+          ],
+          fallback: [
+            {
+              narration: "*mengangguk pelan sambil menyimak setiap kata yang barusan kamu ucapkan*",
+              chat: "Aku nangkap maksudmu. Menarik cara kamu melihat hal itu—terus terang, bagian mana yang paling kepikiran sama kamu sekarang?"
+            },
+            {
+              narration: "*menatapmu dengan rasa ingin tahu yang tulus*",
+              chat: "Ceritamu barusan bikin aku mikir. Kalau situasinya berlanjut kayak gitu, langkah kecil apa yang paling pengin kamu ambil?"
+            },
+            {
+              narration: "*tersenyum santai sambil bersandar*",
+              chat: "Obrolan sama kamu selalu punya sudut pandang yang beda. Lanjutin aja ceritanya, aku masih nyimak kok."
+            }
+          ]
+        },
+
+        nadia: {
+          tired: [
+            {
+              narration: "*menepuk pelan sandaran kursi di sebelahnya dengan tatapan hangat*",
+              chat: "Sudah kuduga kamu pasti kecapekan. Tarik napas dulu lima detik—kamu nggak harus selalu kuat setiap jam dalam sehari."
+            },
+            {
+              narration: "*menggeleng pelan dengan senyum keibuan yang menenangkan*",
+              chat: "Istirahat itu bagian dari progres juga, bukan kemunduran. Malam ini kasih izin buat dirimu sendiri buat melambat, ya?"
+            }
+          ],
+          sad: [
+            {
+              narration: "*mendekat sedikit dan mendengarkan dengan penuh perhatian*",
+              chat: "Pelan-pelan saja ceritanya. Perasaan kecewa atau sedih itu valid banget kok, nggak perlu buru-buru dipoles jadi kata-kata positif."
+            },
+            {
+              narration: "*tersenyum lembut menguatkan*",
+              chat: "Kamu sudah bertahan jauh lebih baik dari yang kamu kira. Sekarang kita urai bareng-bareng biar nggak numpuk sendirian di kepalamu."
+            }
+          ],
+          happy: [
+            {
+              narration: "*matanya berbinar senang mendengar ceritamu*",
+              chat: "Wah, keren banget! Aku bangga dengarnya. Simpan energi positif ini baik-baik buat bahan bakar langkahmu berikutnya."
+            }
+          ],
+          work: [
+            {
+              narration: "*mengangguk paham seperti senior yang sudah sering menghadapi situasi serupa*",
+              chat: "Kalau semuanya terasa menumpuk, pilih satu hal paling kecil yang bisa selesai dalam 15 menit. Begitu satu beres, biasanya sisanya ikut mengalir."
+            },
+            {
+              narration: "*tersenyum realistis*",
+              chat: "Jangan terlalu keras menilai diri sendiri. Fokus ke hal yang bisa kamu kontrol hari ini dulu, sisanya kita atur bertahap."
+            }
+          ],
+          weather_night: [
+            {
+              narration: "*menatap langit sore yang perlahan meredup sambil tersenyum tenang*",
+              chat: "Jam-jam pergantian hari begini memang paling pas buat evaluasi ringan tanpa menyalahkan diri sendiri. Suasananya mendukung banget buat ngobrol."
+            }
+          ],
+          food_drink: [
+            {
+              narration: "*tertawa renyah*",
+              chat: "Setuju! Kadang masalah besar terasa setengah selesai begitu perut kenyang atau ada minuman hangat di tangan."
+            }
+          ],
+          question: [
+            {
+              narration: "*berpikir sejenak lalu menjawab dengan runtut dan jernih*",
+              chat: "Kalau aku di posisimu, aku bakal pilih opsi yang paling realistis dijalani jangka panjang, bukan yang cuma kelihatan bagus di awal. Menurutmu gimana?"
+            }
+          ],
+          fallback: [
+            {
+              narration: "*mengangguk setuju sambil menyimak detail ceritamu*",
+              chat: "Poinmu masuk akal banget. Aku suka cara kamu menyusunnya—lalu setelah ini, bagian mana yang mau kamu prioritaskan dulu?"
+            },
+            {
+              narration: "*tersenyum hangat penuh dukungan*",
+              chat: "Menarik! Coba ceritain lebih dalam lagi, aku pengin dengar dari sudut pandangmu sepenuhnya."
+            }
+          ]
+        },
+
+        clarissa: {
+          tired: [
+            {
+              narration: "*mencondongkan tubuh sedikit ke depan, menopang dagu dengan jemari lentik sambil tersenyum lembut*",
+              chat: "Kasihan sekali... wajahmu sudah bilang semuanya bahkan sebelum kamu mengaku lelah. Lucu ya bagaimana kamu selalu memaksakan diri sampai batas akhir hanya supaya terlihat tangguh."
+            },
+            {
+              narration: "*mengamati bahumu yang sedikit turun dengan sorot mata tajam namun bernada manis*",
+              chat: "Lelah fisik itu mudah pulih, tapi lelah karena terus berpura-pura kuat di depan semua orang... itu jauh lebih menyiksa, bukan? Aku suka melihatmu jujur di depanku sekarang."
+            },
+            {
+              narration: "*menyodorkan botol minum dingin dengan gerakan anggun dan senyum tipis yang sulit ditebak*",
+              chat: "Minum dulu. Kamu terlihat begitu rapuh saat kelelahan seperti ini—dan jujur saja, sisi rapuhmu jauh lebih menarik untuk kupelajari daripada topeng ramahmu."
+            }
+          ],
+          sad: [
+            {
+              narration: "*menatap dalam ke matamu tanpa berkedip, seolah menikmati setiap getaran emosi yang muncul*",
+              chat: "Suaramu sedikit bergetar barusan. Sakit, ya? Tidak apa-apa... ceritakan saja semuanya padaku. Orang lain mungkin mencoba menghiburmu, tapi aku lebih suka memahami di titik mana hatimu paling mudah retak."
+            },
+            {
+              narration: "*tersenyum manis penuh simpati yang terasa halus sekaligus menusuk*",
+              chat: "Manusia selalu terlihat paling jujur saat sedang terluka. Jangan ditahan di depanku—aku berjanji akan mendengarkan setiap detail rasa sakitmu dengan sangat saksama."
+            }
+          ],
+          happy: [
+            {
+              narration: "*tersenyum anggun sambil memiringkan kepala, mengamati binar wajahmu dengan cermat*",
+              chat: "Wah, senyummu cerah sekali hari ini. Senang rasanya melihatmu bahagia... walau sebagai psikolog, aku selalu penasaran seberapa lama euforia kecil itu mampu bertahan sebelum kenyataan mengujinya lagi."
+            },
+            {
+              narration: "*tertawa pelan dengan suara lembut yang menghanyutkan*",
+              chat: "Nikmati saja momen manis ini sepuasmu. Jarang-jarang aku melihatmu selega ini—ceritakan padaku apa yang berhasil membuat pertahananmu turun begitu cepat."
+            }
+          ],
+          work: [
+            {
+              narration: "*menyilangkan kaki dengan anggun, menatapmu seperti sedang membaca papan catur*",
+              chat: "Kamu terlalu sibuk memikirkan ekspektasi orang lain sampai lupa mereka sebenarnya tidak peduli seberapa keras kamu berdarah-darah di balik layar. Strategimu terlalu melelahkan, manis."
+            },
+            {
+              narration: "*tersenyum tipis penuh perhitungan*",
+              chat: "Menarik sekali melihat caramu menekan diri sendiri demi target itu. Coba katakan dengan jujur: kamu mengejarnya karena benar-benar mau, atau karena takut terlihat gagal?"
+            }
+          ],
+          weather_night: [
+            {
+              narration: "*melirik pantulan cahaya lampu di kaca jendela sebelum kembali mengunci tatapanmu*",
+              chat: "Suasana seperti ini selalu menurunkan pertahanan psikologis seseorang. Tidak heran kalau di jam-jam begini kamu jadi lebih mudah terbuka padaku."
+            }
+          ],
+          food_drink: [
+            {
+              narration: "*tersenyum manis sambil menyesap minumannya perlahan*",
+              chat: "Selera yang menarik. Kebiasaan kecil seperti apa yang kamu konsumsi saat sedang tertekan selalu membocorkan banyak hal tentang isi kepalamu."
+            }
+          ],
+          question: [
+            {
+              narration: "*tersenyum misterius, membiarkan keheningan menggantung beberapa detik sebelum menjawab*",
+              chat: "Kalau aku langsung memberimu jawabannya sekarang, di mana letak serunya? Kamu sebenarnya sudah tahu jawabannya—kamu hanya butuh seseorang untuk memvalidasi keraguanmu, kan?"
+            },
+            {
+              narration: "*menatapmu tajam dengan nada suara selembut sutra*",
+              chat: "Pertanyaanmu barusan sudah cukup membocorkan apa yang sedang kamu takutkan. Coba tebak, menurutmu apa yang akan kukatakan kalau aku tidak sedang bersikap manis?"
+            }
+          ],
+          fallback: [
+            {
+              narration: "*tersenyum lembut namun tatapannya membedah setiap kata yang baru kamu ucapkan*",
+              chat: "Cara kamu merangkai kalimat barusan menarik sekali. Ada sesuatu yang sengaja kamu sembunyikan di balik nada santaimu itu... mau mengaku sendiri atau aku yang menebaknya?"
+            },
+            {
+              narration: "*mendekat sedikit sehingga aroma parfumnya yang lembut terasa, lalu berbisik tenang*",
+              chat: "Kamu selalu punya reaksi yang menghibur setiap kali kita bicara. Teruskan saja ceritanya—aku sangat menikmati melihat bagaimana pikiranmu bekerja saat sedang terpojok."
+            },
+            {
+              narration: "*mengangguk pelan dengan senyum manis yang penuh kendali*",
+              chat: "Begitu rupanya. Semakin banyak kamu bicara, semakin jelas pola yang kamu ulang terus-menerus. Lanjutkan, aku belum bosan mengamati."
+            }
+          ]
+        },
+
+        custom: {
+          tired: [
+            {
+              narration: "*menoleh dengan ekspresi peduli dan nada bicara yang santai*",
+              chat: "Kelihatan banget hari ini cukup menguras tenaga. Ambil jeda dulu aja, nggak perlu dipaksain langsung beres semuanya sekarang."
+            }
+          ],
+          sad: [
+            {
+              narration: "*mendengarkan dengan tenang tanpa buru-buru menghakimi*",
+              chat: "Kedengarannya berat banget ya. Kalau mau ditumpahin di sini pelan-pelan, aku siap dengerin kok."
+            }
+          ],
+          happy: [
+            {
+              narration: "*ikut tersenyum cerah*",
+              chat: "Asyik! Ikut senang dengarnya. Ceritain lebih lanjut dong biar suasananya makin seru."
+            }
+          ],
+          work: [
+            {
+              narration: "*mengangguk memahami situasinya*",
+              chat: "Memang kadang ritme kerjaan suka bikin kewalahan. Coba atur napas dulu dan kerjain dari bagian yang paling ringan."
+            }
+          ],
+          weather_night: [
+            {
+              narration: "*menikmati suasana sekitar yang tenang*",
+              chat: "Suasananya lagi mendukung banget buat ngobrol panjang tanpa terburu-buru."
+            }
+          ],
+          food_drink: [
+            {
+              narration: "*tersenyum santai*",
+              chat: "Pilihan yang pas banget buat nemenin obrolan kita kali ini."
+            }
+          ],
+          question: [
+            {
+              narration: "*berpikir sejenak sebelum menanggapi*",
+              chat: "Menarik pertanyaannya. Kalau dilihat dari situasinya sekarang, gimana menurut instingmu sendiri?"
+            }
+          ],
+          fallback: [
+            {
+              narration: "*menyimak dengan antusias sambil menjaga alur obrolan tetap hangat*",
+              chat: "Aku nangkap ceritamu. Menarik banget sudut pandangnya—terus gimana kelanjutannya menurutmu?"
+            },
+            {
+              narration: "*tersenyum ringan dan menanggapi dengan santai*",
+              chat: "Bener juga ya kalau dipikir-pikir. Ceritain lagi detailnya, aku masih ngikutin alurnya kok."
+            }
+          ]
+        }
+      };
+
+      // State Aplikasi
+      let state = {
+        activeCharId: "rendra",
+        userName: "Raya",
+        mode: "story", // "chat" | "story"
+        characters: JSON.parse(JSON.stringify(DEFAULT_CHARACTERS)),
+        sessions: {},
+        lastUsedIndex: {}
+      };
+
+      let editingMsgId = null;
+
+      // Elemen DOM
+      const sidebar = document.getElementById("sidebar");
+      const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+      const toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+      const closeSidebarBtn = document.getElementById("closeSidebarBtn");
+      const charListEl = document.getElementById("charList");
+      const userNameInput = document.getElementById("userNameInput");
+      const sceneInput = document.getElementById("sceneInput");
+      const applySceneBtn = document.getElementById("applySceneBtn");
+      const charNameInput = document.getElementById("charNameInput");
+      const charRoleInput = document.getElementById("charRoleInput");
+      const charPersonaInput = document.getElementById("charPersonaInput");
+      const saveCharBtn = document.getElementById("saveCharBtn");
+      const memoryInput = document.getElementById("memoryInput");
+      const addMemoryBtn = document.getElementById("addMemoryBtn");
+      const memoryListEl = document.getElementById("memoryList");
+      const exportMdBtn = document.getElementById("exportMdBtn");
+      const exportJsonBtn = document.getElementById("exportJsonBtn");
+      const importJsonInput = document.getElementById("importJsonInput");
+      const resetChatBtn = document.getElementById("resetChatBtn");
+
+      const headerAvatar = document.getElementById("headerAvatar");
+      const headerCharName = document.getElementById("headerCharName");
+      const headerScenePill = document.getElementById("headerScenePill");
+      const headerSceneText = document.getElementById("headerSceneText");
+      const modeChatBtn = document.getElementById("modeChatBtn");
+      const modeStoryBtn = document.getElementById("modeStoryBtn");
+      const chatStream = document.getElementById("chatStream");
+      const messageInput = document.getElementById("messageInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const saveStatus = document.getElementById("saveStatus");
+
+      // Utilitas
+      function uid() {
+        return "msg_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+      }
+
+      function getActiveChar() {
+        return state.characters.find(c => c.id === state.activeCharId) || state.characters[0];
+      }
+
+      function ensureSession(char) {
+        if (!state.sessions[char.id] || !Array.isArray(state.sessions[char.id]) || state.sessions[char.id].length === 0) {
+          state.sessions[char.id] = [
+            {
+              id: uid(),
+              sender: "ai",
+              text: char.greeting,
+              timestamp: Date.now()
+            }
+          ];
+        }
+        return state.sessions[char.id];
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          saveStatus.textContent = "Tersimpan otomatis";
+        } catch (err) {
+          saveStatus.textContent = "Gagal simpan lokal";
+        }
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.characters) && parsed.characters.length > 0) {
+              // Pastikan semua karakter preset default tetap tersedia
+              DEFAULT_CHARACTERS.forEach(defChar => {
+                if (!parsed.characters.some(c => c.id === defChar.id)) {
+                  parsed.characters.push(JSON.parse(JSON.stringify(defChar)));
+                }
+              });
+              state = {
+                ...state,
+                ...parsed,
+                sessions: parsed.sessions || {},
+                lastUsedIndex: parsed.lastUsedIndex || {}
+              };
+            }
+          }
+        } catch (err) {
+          console.warn("Memulihkan state default:", err);
+        }
+
+        const active = getActiveChar();
+        state.activeCharId = active.id;
+        ensureSession(active);
+      }
+
+      // Kontrol Sidebar Responsif
+      function isMobile() {
+        return window.innerWidth <= 820;
+      }
+
+      function openSidebar() {
+        if (isMobile()) {
+          sidebar.classList.add("open");
+          sidebarBackdrop.classList.add("active");
+        } else {
+          sidebar.classList.remove("collapsed");
+        }
+      }
+
+      function closeSidebar() {
+        if (isMobile()) {
+          sidebar.classList.remove("open");
+          sidebarBackdrop.classList.remove("active");
+        } else {
+          sidebar.classList.add("collapsed");
+        }
+      }
+
+      function toggleSidebar() {
+        if (isMobile()) {
+          const opening = !sidebar.classList.contains("open");
+          if (opening) openSidebar();
+          else closeSidebar();
+        } else {
+          sidebar.classList.toggle("collapsed");
+        }
+      }
+
+      // Formatting Narasi (*teks miring*)
+      function escapeHtml(str) {
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function formatMessageText(text) {
+        const escaped = escapeHtml(text);
+        return escaped.replace(/\*([^*]+)\*/g, '<span class="narration">*$1*</span>');
+      }
+
+      // Mesin Respon Lokal Offline
+      function detectTopic(text) {
+        const t = text.toLowerCase();
+        if (/\b(capek|lelah|ngantuk|penat|burnout|tepar|pusing|letih|energi)\b/.test(t)) return "tired";
+        if (/\b(sedih|nangis|kecewa|hampa|galau|down|berat|sakit|takut|cemas|overthinking)\b/.test(t)) return "sad";
+        if (/\b(senang|bahagia|lega|berhasil|seru|asyik|yeay|mantap|bangga|suka)\b/.test(t)) return "happy";
+        if (/\b(kerja|tugas|deadline|proyek|kuliah|kantor|target|gym|latihan|belajar)\b/.test(t)) return "work";
+        if (/\b(hujan|malam|senja|pagi|gerimis|angin|suasana|langit|dingin)\b/.test(t)) return "weather_night";
+        if (/\b(kopi|teh|makan|lapar|haus|kue|roti|minum|manis)\b/.test(t)) return "food_drink";
+        if (text.includes("?") || /\b(gimana|menurutmu|kenapa|apa|kapan|siapa|boleh)\b/.test(t)) return "question";
+        return "fallback";
+      }
+
+      function pickVariant(char, topic) {
+        const bank = RESPONSE_BANK[char.archetype] || RESPONSE_BANK.custom;
+        const pool = bank[topic] && bank[topic].length > 0 ? bank[topic] : bank.fallback;
+        const key = `${char.id}_${topic}`;
+        const prevIdx = typeof state.lastUsedIndex[key] === "number" ? state.lastUsedIndex[key] : -1;
+
+        let nextIdx = 0;
+        if (pool.length > 1) {
+          do {
+            nextIdx = Math.floor(Math.random() * pool.length);
+          } while (nextIdx === prevIdx);
+        }
+        state.lastUsedIndex[key] = nextIdx;
+        return pool[nextIdx];
+      }
+
+      function generateOfflineReply(userText, char) {
+        const topic = detectTopic(userText);
+        const variant = pickVariant(char, topic);
+        const userName = (state.userName || "").trim();
+
+        let dialog = variant.chat;
+
+        // Sisipkan panggilan nama pengguna secara natural sesekali
+        if (userName && Math.random() < 0.45 && !dialog.toLowerCase().includes(userName.toLowerCase())) {
+          dialog = `${userName}, ${dialog.charAt(0).toLowerCase()}${dialog.slice(1)}`;
+        }
+
+        // Sesekali kaitkan dengan catatan memori yang tersimpan
+        if (Array.isArray(char.memories) && char.memories.length > 0 && Math.random() < 0.28) {
+          const randomMem = char.memories[Math.floor(Math.random() * char.memories.length)];
+          dialog += ` (Aku masih ingat soal "${randomMem}", jadi aku cukup paham konteksnya.)`;
+        }
+
+        if (state.mode === "chat") {
+          return dialog;
+        }
+        return `${variant.narration} ${dialog}`;
+      }
+
+      // Render UI
+      function renderSidebar() {
+        const active = getActiveChar();
+
+        // Daftar Karakter
+        charListEl.innerHTML = "";
+        state.characters.forEach(c => {
+          const btn = document.createElement("button");
+          btn.className = "char-card" + (c.id === active.id ? " active" : "");
+          btn.innerHTML = `
+            <div class="char-card-top">
+              <span>${escapeHtml(c.avatar)}</span>
+              <span>${escapeHtml(c.name)}</span>
+            </div>
+            <div class="char-card-role">${escapeHtml(c.role)}</div>
+          `;
+          btn.addEventListener("click", () => {
+            state.activeCharId = c.id;
+            editingMsgId = null;
+            ensureSession(c);
+            saveState();
+            renderAll();
+            if (isMobile()) closeSidebar();
+          });
+          charListEl.appendChild(btn);
+        });
+
+        // Input Profil & Latar
+        userNameInput.value = state.userName || "";
+        sceneInput.value = active.scene || "";
+        charNameInput.value = active.name || "";
+        charRoleInput.value = active.role || "";
+        charPersonaInput.value = active.persona || "";
+
+        // Daftar Memori
+        memoryListEl.innerHTML = "";
+        (active.memories || []).forEach((mem, idx) => {
+          const item = document.createElement("div");
+          item.className = "memory-item";
+          item.innerHTML = `
+            <span>• ${escapeHtml(mem)}</span>
+            <button class="memory-del" title="Hapus catatan">×</button>
+          `;
+          item.querySelector(".memory-del").addEventListener("click", () => {
+            active.memories.splice(idx, 1);
+            saveState();
+            renderSidebar();
+          });
+          memoryListEl.appendChild(item);
+        });
+      }
+
+      function renderHeader() {
+        const active = getActiveChar();
+        headerAvatar.textContent = active.avatar;
+        headerCharName.textContent = active.name;
+        headerSceneText.textContent = active.scene || "Belum ada latar cerita";
+
+        modeChatBtn.classList.toggle("active", state.mode === "chat");
+        modeStoryBtn.classList.toggle("active", state.mode === "story");
+      }
+
+      function renderChat() {
+        const active = getActiveChar();
+        const messages = ensureSession(active);
+
+        chatStream.innerHTML = "";
+
+        // Banner Latar Aktif di Atas Stream
+        if (active.scene) {
+          const banner = document.createElement("div");
+          banner.className = "scene-banner";
+          banner.textContent = `📍 Latar: ${active.scene}`;
+          chatStream.appendChild(banner);
+        }
+
+        messages.forEach((msg, index) => {
+          const row = document.createElement("div");
+          row.className = `msg-row ${msg.sender}`;
+
+          const senderLabel = document.createElement("div");
+          senderLabel.className = "msg-sender";
+          senderLabel.textContent = msg.sender === "ai" ? active.name : (state.userName || "Kamu");
+          row.appendChild(senderLabel);
+
+          if (editingMsgId === msg.id) {
+            const editBox = document.createElement("div");
+            editBox.className = "edit-box";
+            const ta = document.createElement("textarea");
+            ta.className = "textarea";
+            ta.value = msg.text;
+            editBox.appendChild(ta);
+
+            const actRow = document.createElement("div");
+            actRow.className = "btn-row";
+            const saveBtn = document.createElement("button");
+            saveBtn.className = "btn btn-primary";
+            saveBtn.textContent = "Simpan";
+            saveBtn.addEventListener("click", () => {
+              const updated = ta.value.trim();
+              if (updated) {
+                msg.text = updated;
+                saveState();
+              }
+              editingMsgId = null;
+              renderChat();
+            });
+
+            const cancelBtn = document.createElement("button");
+            cancelBtn.className = "btn";
+            cancelBtn.textContent = "Batal";
+            cancelBtn.addEventListener("click", () => {
+              editingMsgId = null;
+              renderChat();
+            });
+
+            actRow.appendChild(saveBtn);
+            actRow.appendChild(cancelBtn);
+            editBox.appendChild(actRow);
+            row.appendChild(editBox);
+          } else {
+            const bubble = document.createElement("div");
+            bubble.className = "msg-bubble";
+            bubble.innerHTML = formatMessageText(msg.text);
+            row.appendChild(bubble);
+
+            const actions = document.createElement("div");
+            actions.className = "msg-actions";
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "msg-action-btn";
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => {
+              editingMsgId = msg.id;
+              renderChat();
+            });
+            actions.appendChild(editBtn);
+
+            if (msg.sender === "ai" && index > 0) {
+              const regenBtn = document.createElement("button");
+              regenBtn.className = "msg-action-btn";
+              regenBtn.textContent = "↻ Variasi Lain";
+              regenBtn.addEventListener("click", () => {
+                const prevUserMsg = [...messages.slice(0, index)].reverse().find(m => m.sender === "user");
+                const promptSeed = prevUserMsg ? prevUserMsg.text : msg.text;
+                msg.text = generateOfflineReply(promptSeed, active);
+                saveState();
+                renderChat();
+              });
+              actions.appendChild(regenBtn);
+            }
+
+            row.appendChild(actions);
+          }
+
+          chatStream.appendChild(row);
+        });
+
+        chatStream.scrollTop = chatStream.scrollHeight;
+      }
+
+      function renderAll() {
+        renderSidebar();
+        renderHeader();
+        renderChat();
+      }
+
+      // Kirim Pesan & Simulasi Respon
+      function sendMessage(rawText) {
+        const text = (rawText !== undefined ? rawText : messageInput.value).trim();
+        if (!text) return;
+
+        const active = getActiveChar();
+        const messages = ensureSession(active);
+
+        messages.push({
+          id: uid(),
+          sender: "user",
+          text,
+          timestamp: Date.now()
+        });
+
+        messageInput.value = "";
+        messageInput.style.height = "auto";
+        saveState();
+        renderChat();
+
+        // Indikator mengetik alami
+        const typingEl = document.createElement("div");
+        typingEl.className = "typing-indicator";
+        typingEl.innerHTML = `<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`;
+        chatStream.appendChild(typingEl);
+        chatStream.scrollTop = chatStream.scrollHeight;
+
+        const delay = 480 + Math.min(700, text.length * 12);
+        setTimeout(() => {
+          typingEl.remove();
+          const reply = generateOfflineReply(text, active);
+          messages.push({
+            id: uid(),
+            sender: "ai",
+            text: reply,
+            timestamp: Date.now()
+          });
+          saveState();
+          renderChat();
+        }, delay);
+      }
+
+      // Event Listeners
+      toggleSidebarBtn.addEventListener("click", toggleSidebar);
+      closeSidebarBtn.addEventListener("click", closeSidebar);
+      sidebarBackdrop.addEventListener("click", closeSidebar);
+
+      headerScenePill.addEventListener("click", () => {
+        openSidebar();
+        setTimeout(() => sceneInput.focus(), 120);
+      });
+
+      modeChatBtn.addEventListener("click", () => {
+        state.mode = "chat";
+        saveState();
+        renderHeader();
+      });
+
+      modeStoryBtn.addEventListener("click", () => {
+        state.mode = "story";
+        saveState();
+        renderHeader();
+      });
+
+      userNameInput.addEventListener("input", () => {
+        state.userName = userNameInput.value;
+        saveState();
+      });
+
+      applySceneBtn.addEventListener("click", () => {
+        const active = getActiveChar();
+        const newScene = sceneInput.value.trim();
+        if (!newScene) return;
+
+        active.scene = newScene;
+        const messages = ensureSession(active);
+        const transitionLine = state.mode === "story"
+          ? `*suasana perlahan berganti mengikuti latar baru: ${newScene}* Bagaimana menurutmu suasana di sini sekarang?`
+          : `Latar berpindah ke: ${newScene}. Enak juga suasana barunya.`;
+
+        messages.push({
+          id: uid(),
+          sender: "ai",
+          text: transitionLine,
+          timestamp: Date.now()
+        });
+
+        saveState();
+        renderAll();
+        if (isMobile()) closeSidebar();
+      });
+
+      saveCharBtn.addEventListener("click", () => {
+        const active = getActiveChar();
+        active.name = charNameInput.value.trim() || active.name;
+        active.role = charRoleInput.value.trim() || active.role;
+        active.persona = charPersonaInput.value.trim() || active.persona;
+        saveState();
+        renderAll();
+      });
+
+      addMemoryBtn.addEventListener("click", () => {
+        const val = memoryInput.value.trim();
+        if (!val) return;
+        const active = getActiveChar();
+        active.memories = active.memories || [];
+        active.memories.push(val);
+        memoryInput.value = "";
+        saveState();
+        renderSidebar();
+      });
+
+      memoryInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addMemoryBtn.click();
+        }
+      });
+
+      sendBtn.addEventListener("click", () => sendMessage());
+
+      messageInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      messageInput.addEventListener("input", () => {
+        messageInput.style.height = "auto";
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 140) + "px";
+      });
+
+      document.querySelectorAll(".chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          const prompt = chip.getAttribute("data-prompt");
+          sendMessage(prompt);
+        });
+      });
+
+      // Export Markdown
+      exportMdBtn.addEventListener("click", () => {
+        const active = getActiveChar();
+        const messages = ensureSession(active);
+        const lines = [
+          `# Episode Cerita bersama ${active.name}`,
+          `**Peran:** ${active.role}`,
+          `**Latar:** ${active.scene}`,
+          "",
+          "---",
+          ""
+        ];
+
+        messages.forEach(m => {
+          const who = m.sender === "ai" ? active.name : (state.userName || "Kamu");
+          lines.push(`**${who}:** ${m.text}\n`);
+        });
+
+        const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `cerita-${active.id}-${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Export JSON Backup
+      exportJsonBtn.addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ruang-cerita-backup-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Import JSON Restore
+      importJsonInput.addEventListener("change", e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (imported && Array.isArray(imported.characters)) {
+              state = imported;
+              saveState();
+              renderAll();
+            }
+          } catch (err) {
+            alert("File JSON tidak valid.");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+      });
+
+      // Reset Sesi Karakter Aktif
+      resetChatBtn.addEventListener("click", () => {
+        const active = getActiveChar();
+        const def = DEFAULT_CHARACTERS.find(c => c.id === active.id);
+        state.sessions[active.id] = [
+          {
+            id: uid(),
+            sender: "ai",
+            text: def ? def.greeting : active.greeting,
+            timestamp: Date.now()
+          }
+        ];
+        saveState();
+        renderChat();
+      });
+
+      // Inisialisasi Awal
+      loadState();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
